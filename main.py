@@ -40,17 +40,9 @@ while running:
             if settings_button_rect.collidepoint(mx, my):
                 settings_open = True
 
-    # === FYSIKK ===
-    a = akselerasjon(x, v) if air_resistance else akselerasjon(x, 0)
-    v += a * dt
-    x += v * dt
 
     # === TEGNING ===
     screen.fill(WHITE)
-
-    # Simulering (fjær + masse)
-    pygame.draw.line(screen, BLACK, (100, HEIGHT // 2), (x, HEIGHT // 2), 5)
-    pygame.draw.circle(screen, BLUE, (int(x), HEIGHT // 2), 20)
 
     # Settings-knapp
     pygame.draw.rect(screen, (100, 100, 200), settings_button_rect)
