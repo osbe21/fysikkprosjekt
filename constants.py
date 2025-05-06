@@ -1,8 +1,8 @@
 # constants.py
 
 # Skjerm
-WIDTH = 800
-HEIGHT = 600
+WIDTH = 1200
+HEIGHT = 800
 FPS = 60
 
 # Farger
