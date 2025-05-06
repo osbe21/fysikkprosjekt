@@ -1,1 +1,3 @@
-# fysikkprosjekt
+# Fysikkprosjekt
+
+# Simulering av fjærer
