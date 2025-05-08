@@ -4,7 +4,7 @@ from constants import *
 
 class Spring:
     def __init__(self, block_1, block_2, rel_pos_1, rel_pos_2):
-        self.rest_length = 2#np.linalg.norm(block_1.position - block_2.position)
+        self.rest_length = np.linalg.norm(block_1.position - block_2.position)
 
         self.block_1 = block_1
         self.block_2 = block_2
