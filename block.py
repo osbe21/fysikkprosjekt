@@ -5,7 +5,8 @@ from constants import *
 
 class Block:
     def __init__(self, x, y, width, height, is_immovable=False):
-        self.mass = width * height / px_per_meter**2
+        density_scale = 4
+        self.mass = width * height * density_scale / px_per_meter**2
         self.sum_forces = np.zeros(2)
         self.velocity = np.zeros(2)
         self.position = np.array([x, y], dtype=float) / px_per_meter

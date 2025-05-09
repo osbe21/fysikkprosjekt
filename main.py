@@ -1,5 +1,6 @@
 import pygame as pg
 import numpy as np
+import matplotlib.pyplot as plt
 from constants import *
 from block import Block
 from spring import Spring
@@ -9,25 +10,24 @@ pg.init()
 screen = pg.display.set_mode((WIDTH, HEIGHT))
 pg.display.set_caption("Fjær og masse simulering")
 clock = pg.time.Clock()
-delta_time = 1 / FPS
+elapsed_time = 0
+delta_time = 1 / FPS * time_scale
 
-is_paused = False
-
-settings_open = False
-settings_button_rect = pg.Rect(10, HEIGHT - 60, 120, 50)
-close_button_rect = pg.Rect(0, 0, 40, 40)
 font = pg.font.SysFont(None, 36)
 
-air_resistance = False
+is_paused = True
+in_block_mode = True
 
-block_1 = Block(220, 200, 200, 100)
-block_2 = Block(200, 50, 100, 20, is_immovable=True)
-blocks = [block_1, block_2]
-springs = [Spring(block_1, block_2, np.array([0, 0]), np.array([0, 0]))]
+first_block_point = None
+first_spring_object = None # (obj, rel_pos)
+
+blocks = [Block(WIDTH/2, 25, WIDTH, 50, True)]
+springs = []
+
 
 def update_objects():
     for spring in springs:
-        spring.apply_forces()
+        spring.apply_forces(elapsed_time)
 
     for block in blocks:
         block.add_force(g * block.mass * np.array([0, 1])) # Tyngdekraft (g*m)
@@ -39,7 +39,8 @@ def draw_objects():
         block.draw(screen, font)
     
     for spring in springs:
-        spring.draw(screen)
+        spring.draw(screen, font)
+
 
 # Game loop
 running = True
@@ -48,20 +49,53 @@ while running:
     for event in pg.event.get():
         if event.type == pg.QUIT:
             running = False
+        
+        # Bytt mellom å plassere blokk eller fjær
+        if event.type == pg.KEYDOWN:
+            if event.key == pg.K_p:
+                is_paused = not is_paused
+            if event.key == pg.K_m:
+                in_block_mode = not in_block_mode
 
         if event.type == pg.MOUSEBUTTONDOWN:
             mx, my = event.pos
 
-            if settings_open:
-                box_rect = pg.Rect(300, 200, 600, 400)
-                toggle_rect = pg.Rect(box_rect.x + 250, box_rect.y + 90, 40, 40)
-                if close_button_rect.collidepoint(mx, my):
-                    settings_open = False
-                elif toggle_rect.collidepoint(mx, my):
-                    air_resistance = not air_resistance
+            if in_block_mode: # Plasser blokk
+                if first_block_point is None:
+                    first_block_point = (mx, my)
+                else:
+                    x = (mx + first_block_point[0])/2
+                    y = (my + first_block_point[1])/2
+                    width = abs(mx - first_block_point[0])
+                    height = abs(my - first_block_point[1])
 
-            elif settings_button_rect.collidepoint(mx, my):
-                settings_open = True
+                    blocks.append(Block(x, y, width, height))
+
+                    first_block_point = None
+            
+            else: # Plasser fjær
+                selected_block = None
+
+                for block in blocks:
+                    if block.rect.collidepoint(mx, my):
+                        selected_block = block
+                        break
+                
+                if selected_block is None: # Trykket ikke på en blokk
+                    continue
+
+                if first_spring_object is None:
+                    first_spring_object = (selected_block, np.array([mx, my]) - selected_block.position * px_per_meter)
+                else:
+                    second_spring_object = (selected_block, np.array([mx, my]) - selected_block.position * px_per_meter)
+                    springs.append(
+                        Spring(
+                            first_spring_object[0], 
+                            second_spring_object[0], 
+                            first_spring_object[1], 
+                            second_spring_object[1])
+                    )
+                    first_spring_object = None
 
     # === TEGNING ===
     screen.fill(WHITE)
@@ -70,39 +104,27 @@ while running:
         update_objects()
     
     draw_objects()
-
-    # Settings-knapp
-    pg.draw.rect(screen, (100, 100, 200), settings_button_rect)
-    settings_text = font.render("Settings", True, WHITE)
-    screen.blit(settings_text, (settings_button_rect.x + 5, settings_button_rect.y + 10))
-
-    # Settings-meny
-    if settings_open:
-        overlay = pg.Surface((WIDTH, HEIGHT), pg.SRCALPHA)
-        overlay.fill((0, 0, 0, 150))
-        screen.blit(overlay, (0, 0))
-
-        box_rect = pg.Rect(300, 200, 600, 400)
-        pg.draw.rect(screen, (60, 60, 60), box_rect)
-        pg.draw.rect(screen, (200, 200, 200), box_rect, 2)
-
-        title_surf = font.render("Settings", True, WHITE)
-        screen.blit(title_surf, (box_rect.x + 20, box_rect.y + 20))
-
-        close_button_rect.topleft = (box_rect.right - 50, box_rect.y + 10)
-        pg.draw.rect(screen, (150, 50, 50), close_button_rect)
-        close_text = font.render("X", True, WHITE)
-        screen.blit(close_text, (close_button_rect.x + 10, close_button_rect.y))
-
-        # Luftmotstand toggle
-        label_surf = font.render("Luftmotstand", True, WHITE)
-        screen.blit(label_surf, (box_rect.x + 50, box_rect.y + 100))
-        toggle_rect = pg.Rect(box_rect.x + 250, box_rect.y + 90, 40, 40)
-        color = (0, 200, 0) if air_resistance else (200, 0, 0)
-        pg.draw.rect(screen, color, toggle_rect)
-        pg.draw.rect(screen, WHITE, toggle_rect, 2)
+    
+    text = "Simulasjonen er pauset ('P' for å starte)" if is_paused else "Simulasjonen kjører ('P' for å stoppe)"
+    color = RED if is_paused else BLACK
+    render_text(screen, font, text, (WIDTH/2, 150), color)
+    
+    text = ("Blokk" if in_block_mode else "Fjær") + " modus ('M' for å bytte)"
+    color = BLUE if in_block_mode else GREEN
+    render_text(screen, font, text, (WIDTH/2, 100), color)
 
     pg.display.flip()
     delta_time = clock.tick(FPS) / 1000 * time_scale
+    elapsed_time += delta_time
 
 pg.quit()
+
+for spring in springs:
+    spring.logger.plot()
+
+plt.legend()
+plt.title("Fjærkraft over tid")
+plt.xlabel("Kraft (N)")
+plt.ylabel("Tid (s)")
+plt.grid(axis='y')
+plt.show()
