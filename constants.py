@@ -17,6 +17,8 @@ k = 20           # Fjærkonstant (N/m)
 b = 0.4          # Luftmotstand/demping (Ns/m)
 px_per_meter = 200  # Brukes for konvertering mellom meter og pixler
 time_scale = 1
+dt = 1 / FPS * time_scale
+time_elapsed = 0
 
 
 def render_text(screen, font, text, center_pos, color=(255, 255, 255), background=None):
